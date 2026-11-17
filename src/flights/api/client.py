@@ -25,7 +25,6 @@ class DuffelClient:
             "Content-Type": "application/json"
         }
 
-        self.logger.info(f"API key starts with: {self._token[:8] if self._token else None}")
         self.logger.info(f"Using base URL: {self.base_url}")
 
         # Initialize endpoints

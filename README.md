@@ -123,6 +123,38 @@ Add the following configuration to your JSON file:
 - Ensure the directory path matches your local installation
 
 ## Deployment
+
+### Render: public flight search without sign-in
+
+Create a Render Blueprint from this repository's `render.yaml`, or create a
+Web Service with these settings:
+
+- Runtime: Python 3 (not Docker)
+- Build: `uv sync --locked --no-dev`
+- Start: `uv run --locked --no-sync flights-mcp --http`
+- Health check: `/health`
+- Environment: `MCP_BIND_HOST=0.0.0.0`, `PYTHON_VERSION=3.12.8`
+- Secret environment variable: `DUFFEL_API_KEY_LIVE` (enter your token in Render)
+
+If the service already uses Docker, keep that runtime and use the included
+Dockerfile. Leave Render's Docker Command override empty: the image starts
+`flights-mcp --http` and binds to `0.0.0.0` using Render's `PORT` automatically.
+Set the same Duffel secret and `/health` health-check path. The native Python
+build/start commands above are only for the Python runtime.
+
+Render supplies `PORT` and `RENDER_EXTERNAL_HOSTNAME`. The service accepts its
+Render hostname while retaining Host/Origin validation. MCP HTTP is stateless,
+so a deployment restart does not require an existing server-side session.
+
+Users connect to `https://<assigned-render-hostname>/mcp` without a login or API
+key. Only the server uses the Duffel token. Do not put that token in GitHub or
+the plugin configuration. Anonymous searches share the owner's Duffel usage.
+
+After deployment, run `uv run --locked python scripts/smoke_test.py --url
+https://<assigned-render-hostname>/mcp` (on one line), then perform a flight
+search to verify Duffel authentication. Offline transport checks run with
+`uv run --locked python -m unittest tests.test_http`.
+
 ### Building
 Prepare the package:
 ```bash
@@ -135,6 +167,51 @@ uv build
 This will create distributions in the `dist/` directory.
 
 ## Debugging
+
+### Test HTTP locally (PowerShell)
+
+In the terminal where you set `DUFFEL_API_KEY_LIVE`, run:
+
+```powershell
+$env:MCP_BIND_HOST = '127.0.0.1'
+$env:PORT = '8000'
+uv run --locked flights-mcp --http
+```
+
+Leave that terminal running. In a second terminal, change to the `flights-mcp`
+project directory and run:
+
+```powershell
+uv run --locked python scripts/smoke_test.py
+```
+
+This checks MCP initialization and discovery of all three flight tools without
+calling Duffel. It does not validate your Duffel token or flight search results.
+The endpoint is `http://127.0.0.1:8000/mcp`. The root URL `/` and `/favicon.ico`
+return 404 because this server does not serve a website. Opening `/mcp` in a
+browser is not a complete MCP test; use the smoke test or MCP Inspector.
+
+To test tool calls interactively, run `npx @modelcontextprotocol/inspector`, open
+the URL it prints, select **Streamable HTTP**, and connect to
+`http://127.0.0.1:8000/mcp`. List the tools and call `search_flights` with:
+
+```json
+{
+  "params": {
+    "type": "one_way",
+    "origin": "SFO",
+    "destination": "LAX",
+    "departure_date": "2026-12-15",
+    "adults": 1,
+    "cabin_class": "economy"
+  }
+}
+```
+
+Always choose a future departure date. This tool call contacts Duffel using the
+token configured in the server terminal. A Duffel test token can be supplied in
+the existing `DUFFEL_API_KEY_LIVE` variable for simulated results.
+
 For the best debugging experience, use the MCP Inspector:
 ```bash
 npx @modelcontextprotocol/inspector uv --directory /path/to/find-flights-mcp run flights-mcp

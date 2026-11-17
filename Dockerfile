@@ -9,6 +9,7 @@ ENV UV_COMPILE_BYTECODE=1
 
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
+ENV UV_PYTHON_DOWNLOADS=never
 
 # Install the project's dependencies using the lockfile and settings
 COPY pyproject.toml uv.lock /app/
@@ -23,14 +24,16 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-COPY --from=uv /root/.local /root/.local
+RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 COPY --from=uv --chown=app:app /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Define environment variable for Duffel API key
-ENV DUFFEL_API_KEY_LIVE=your_duffel_live_api_key_here
+# Supply DUFFEL_API_KEY_LIVE through Render's Environment settings.
+ENV MCP_BIND_HOST=0.0.0.0
+USER app
 
 # Start the MCP server
 ENTRYPOINT ["flights-mcp"]
+CMD ["--http"]

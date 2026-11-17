@@ -4,6 +4,7 @@ import logging
 from typing import Dict
 import json
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 # Import all models through flight_search
 from ..models.flight_search import (
@@ -20,6 +21,9 @@ logger = logging.getLogger(__name__)
 # Initialize FastMCP server and API client
 mcp = FastMCP("find-flights-mcp")
 flight_client = DuffelClient(logger)
+
+READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=True)
+NO_AUTH = {"securitySchemes": [{"type": "noauth"}]}
 
 
 def _create_slice(origin: str, destination: str, date: str, 
@@ -54,7 +58,7 @@ def _create_slice(origin: str, destination: str, date: str,
     
     return slice_data
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY, meta=NO_AUTH)
 async def search_flights(params: FlightSearch) -> str:
     """Search for flights based on parameters."""
     try:
@@ -188,7 +192,7 @@ async def search_flights(params: FlightSearch) -> str:
         logger.error(f"Error searching flights: {str(e)}", exc_info=True)
         raise
 
-@mcp.tool()
+@mcp.tool(annotations=READ_ONLY, meta=NO_AUTH)
 async def get_offer_details(params: OfferDetails) -> str:
     """Get detailed information about a specific flight offer."""
     try:
@@ -202,7 +206,7 @@ async def get_offer_details(params: OfferDetails) -> str:
         logger.error(f"Error getting offer details: {str(e)}", exc_info=True)
         raise
 
-@mcp.tool(name="search_multi_city")
+@mcp.tool(name="search_multi_city", annotations=READ_ONLY, meta=NO_AUTH)
 async def search_multi_city(params: MultiCityRequest) -> str:
     """Search for multi-city flights."""
     try:

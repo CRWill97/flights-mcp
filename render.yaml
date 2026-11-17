@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bacchanal-flights-mcp
+    runtime: python
+    plan: free
+    buildCommand: uv sync --locked --no-dev
+    startCommand: uv run --locked --no-sync flights-mcp --http
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: MCP_BIND_HOST
+        value: 0.0.0.0
+      - key: DUFFEL_API_KEY_LIVE
+        sync: false
